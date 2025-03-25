@@ -65,6 +65,9 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+          TableName: !Ref ChatAppTable
 
   SendMessageFunction:
     Type: AWS::Serverless::Function
@@ -73,6 +76,10 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+          TableName: !Ref ChatAppTable
+
 
   GetConversationsFunction:
     Type: AWS::Serverless::Function
@@ -81,6 +88,9 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+          TableName: !Ref ChatAppTable
 
   ConversationMessagesFunction:
     Type: AWS::Serverless::Function
@@ -89,6 +99,9 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+          TableName: !Ref ChatAppTable
 
 Outputs:
   GraphQLAPIURL:
