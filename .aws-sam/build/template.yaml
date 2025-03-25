@@ -10,6 +10,37 @@ Globals:
         TABLE_NAME:
           Ref: ChatAppTable
 Resources:
+  AppSyncServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: appsync.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: InvokeLambdas
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            Resource:
+            - Fn::GetAtt:
+              - CreateConversationFunction
+              - Arn
+            - Fn::GetAtt:
+              - SendMessageFunction
+              - Arn
+            - Fn::GetAtt:
+              - GetConversationsFunction
+              - Arn
+            - Fn::GetAtt:
+              - ConversationMessagesFunction
+              - Arn
   QueryFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -98,6 +129,134 @@ Resources:
         - ChatGraphQLApi
         - ApiId
       Expires: 1774459540
+  CreateConversationDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      Name: CreateConversationDataSource
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn:
+          Fn::GetAtt:
+          - CreateConversationFunction
+          - Arn
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - AppSyncServiceRole
+        - Arn
+  SendMessageDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      Name: SendMessageDataSource
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn:
+          Fn::GetAtt:
+          - SendMessageFunction
+          - Arn
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - AppSyncServiceRole
+        - Arn
+  GetConversationsDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      Name: GetConversationsDataSource
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn:
+          Fn::GetAtt:
+          - GetConversationsFunction
+          - Arn
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - AppSyncServiceRole
+        - Arn
+  ConversationMessagesDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      Name: ConversationMessagesDataSource
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn:
+          Fn::GetAtt:
+          - ConversationMessagesFunction
+          - Arn
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - AppSyncServiceRole
+        - Arn
+  CreateConversationResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      TypeName: Mutation
+      FieldName: createConversation
+      DataSourceName: CreateConversationDataSource
+      RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\"\
+        : \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+      ResponseMappingTemplate: $util.toJson($context.result)
+    DependsOn: CreateConversationDataSource
+  SendMessageResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      TypeName: Mutation
+      FieldName: sendMessage
+      DataSourceName: SendMessageDataSource
+      RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\"\
+        : \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+      ResponseMappingTemplate: $util.toJson($context.result)
+    DependsOn: SendMessageDataSource
+  GetConversationsResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      TypeName: Query
+      FieldName: conversations
+      DataSourceName: GetConversationsDataSource
+      RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\"\
+        : \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+      ResponseMappingTemplate: $util.toJson($context.result)
+    DependsOn: GetConversationsDataSource
+  ConversationMessagesResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      TypeName: Query
+      FieldName: conversationMessages
+      DataSourceName: ConversationMessagesDataSource
+      RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\"\
+        : \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+      ResponseMappingTemplate: $util.toJson($context.result)
+    DependsOn: ConversationMessagesDataSource
   ChatAppTable:
     Type: AWS::DynamoDB::Table
     Properties:
