@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 10
+    MemorySize: 128
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref ChatAppTable
+
+Resources:
+
+  # AppSync API (CloudFormation native)
+  ChatGraphQLApi:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: ChatAppApi
+      AuthenticationType: API_KEY
+
+  ChatGraphQLSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt ChatGraphQLApi.ApiId
+      DefinitionS3Location: schema.graphql
+
+  ChatGraphQLApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt ChatGraphQLApi.ApiId
+      Expires: 1893456000  # Jan 1, 2030
+
+  # DynamoDB Table (native CFN)
+  ChatAppTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      # TableName: ChatAppTable
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  # Lambda Layer (SAM)
+  SharedDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: SharedDependencies
+      ContentUri: layers/shared-dependencies-layer
+      CompatibleRuntimes:
+        - nodejs18.x
+
+  # Lambda Functions (SAM)
+  CreateConversationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/mutations/createConversation
+      Handler: index.handler
+      Layers:
+        - !Ref SharedDependenciesLayer
+
+  SendMessageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/mutations/sendMessage
+      Handler: index.handler
+      Layers:
+        - !Ref SharedDependenciesLayer
+
+  GetConversationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/queries/getConversations
+      Handler: index.handler
+      Layers:
+        - !Ref SharedDependenciesLayer
+
+  ConversationMessagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/queries/conversationMessages
+      Handler: index.handler
+      Layers:
+        - !Ref SharedDependenciesLayer
+
+Outputs:
+  GraphQLAPIURL:
+    Value: !GetAtt ChatGraphQLApi.Uris.GraphQL
+  APIKey:
+    Value: !GetAtt ChatGraphQLApiKey.ApiKey
