@@ -12,6 +12,70 @@ Globals:
 
 Resources:
 
+  # Roles
+  QueryFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: QueryPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                Resource: !GetAtt ChatAppTable.Arn
+        - PolicyName: LambdaCloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  MutationFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: MutationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                Resource: !GetAtt ChatAppTable.Arn
+        - PolicyName: LambdaCloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
   # AppSync API (CloudFormation native)
   ChatGraphQLApi:
     Type: AWS::AppSync::GraphQLApi
@@ -29,7 +93,7 @@ Resources:
     Type: AWS::AppSync::ApiKey
     Properties:
       ApiId: !GetAtt ChatGraphQLApi.ApiId
-      Expires: 1893456000  # Jan 1, 2030
+      Expires: 1774459540 # 25 March 2026
 
   # DynamoDB Table (native CFN)
   ChatAppTable:
@@ -65,9 +129,7 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-          TableName: !Ref ChatAppTable
+      Role: !GetAtt MutationFunctionRole.Arn
 
   SendMessageFunction:
     Type: AWS::Serverless::Function
@@ -76,9 +138,7 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-          TableName: !Ref ChatAppTable
+      Role: !GetAtt MutationFunctionRole.Arn
 
 
   GetConversationsFunction:
@@ -88,9 +148,7 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
-      Policies:
-        - DynamoDBReadPolicy:
-          TableName: !Ref ChatAppTable
+      Role: !GetAtt QueryFunctionRole.Arn
 
   ConversationMessagesFunction:
     Type: AWS::Serverless::Function
@@ -99,12 +157,13 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer
-      Policies:
-        - DynamoDBReadPolicy:
-          TableName: !Ref ChatAppTable
+      Role: !GetAtt QueryFunctionRole.Arn
 
 Outputs:
   GraphQLAPIURL:
-    Value: !GetAtt ChatGraphQLApi.Uris.GraphQL
+    Description: The URL of the AppSync GraphQL API
+    Value: !GetAtt ChatGraphQLApi.GraphQLUrl
+
   APIKey:
+    Description: The AppSync API Key
     Value: !GetAtt ChatGraphQLApiKey.ApiKey

@@ -1,0 +1,11 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "chat-app"
+resolve_s3 = true
+s3_prefix = "chat-app"
+region = "eu-west-2"
+profile = "admin"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+image_repositories = []

@@ -10,6 +10,73 @@ Globals:
         TABLE_NAME:
           Ref: ChatAppTable
 Resources:
+  QueryFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: QueryPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:GetItem
+            - dynamodb:Query
+            Resource:
+              Fn::GetAtt:
+              - ChatAppTable
+              - Arn
+      - PolicyName: LambdaCloudWatchLogs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+  MutationFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: MutationPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Query
+            Resource:
+              Fn::GetAtt:
+              - ChatAppTable
+              - Arn
+      - PolicyName: LambdaCloudWatchLogs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
   ChatGraphQLApi:
     Type: AWS::AppSync::GraphQLApi
     Properties:
@@ -30,7 +97,7 @@ Resources:
         Fn::GetAtt:
         - ChatGraphQLApi
         - ApiId
-      Expires: 1893456000
+      Expires: 1774459540
   ChatAppTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -59,6 +126,10 @@ Resources:
       Handler: index.handler
       Layers:
       - Ref: SharedDependenciesLayer
+      Role:
+        Fn::GetAtt:
+        - MutationFunctionRole
+        - Arn
     Metadata:
       SamResourceId: CreateConversationFunction
   SendMessageFunction:
@@ -68,6 +139,10 @@ Resources:
       Handler: index.handler
       Layers:
       - Ref: SharedDependenciesLayer
+      Role:
+        Fn::GetAtt:
+        - MutationFunctionRole
+        - Arn
     Metadata:
       SamResourceId: SendMessageFunction
   GetConversationsFunction:
@@ -77,6 +152,10 @@ Resources:
       Handler: index.handler
       Layers:
       - Ref: SharedDependenciesLayer
+      Role:
+        Fn::GetAtt:
+        - QueryFunctionRole
+        - Arn
     Metadata:
       SamResourceId: GetConversationsFunction
   ConversationMessagesFunction:
@@ -86,15 +165,21 @@ Resources:
       Handler: index.handler
       Layers:
       - Ref: SharedDependenciesLayer
+      Role:
+        Fn::GetAtt:
+        - QueryFunctionRole
+        - Arn
     Metadata:
       SamResourceId: ConversationMessagesFunction
 Outputs:
   GraphQLAPIURL:
+    Description: The URL of the AppSync GraphQL API
     Value:
       Fn::GetAtt:
       - ChatGraphQLApi
-      - Uris.GraphQL
+      - GraphQLUrl
   APIKey:
+    Description: The AppSync API Key
     Value:
       Fn::GetAtt:
       - ChatGraphQLApiKey
