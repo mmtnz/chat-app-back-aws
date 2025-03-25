@@ -55,6 +55,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - dynamodb:GetItem
+                  - dynamodb:Scan
                   - dynamodb:Query
                 Resource: !GetAtt ChatAppTable.Arn
         - PolicyName: LambdaCloudWatchLogs
@@ -88,6 +89,7 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
                   - dynamodb:Query
+                  - dynamodb:Scan
                 Resource: !GetAtt ChatAppTable.Arn
         - PolicyName: LambdaCloudWatchLogs
           PolicyDocument:
