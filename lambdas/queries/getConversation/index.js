@@ -23,7 +23,7 @@ exports.handler = async (event) => {
     return {
         id: result.Item.PK.S,
         name: result.Item.name.S,
-        created_at: result.Item.created_at.S
+        createdAt: result.Item.createdAt.S
 
     }
 };

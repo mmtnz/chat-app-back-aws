@@ -18,7 +18,7 @@ exports.handler = async (event) => {
             sender: { S: sender },
             content: { S: content },
             system: { BOOL: system === undefined ? false : system },
-            created_at: { S: `${createdAt}` }
+            createdAt: { S: `${createdAt}` }
         }
     };
 
@@ -31,6 +31,6 @@ exports.handler = async (event) => {
         sender,
         content,
         system: system === undefined ? false : system,
-        created_at: createdAt
+        createdAt,
     };
 };

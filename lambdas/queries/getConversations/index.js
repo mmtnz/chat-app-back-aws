@@ -17,6 +17,6 @@ exports.handler = async () => {
     return result.Items.map(item => ({
         id: item.PK.S,
         name: item.name.S,
-        created_at: item.created_at.S
+        createdAt: item.createdAt.S
     }));
 };

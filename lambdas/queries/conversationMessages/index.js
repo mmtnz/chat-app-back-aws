@@ -20,10 +20,10 @@ exports.handler = async (event) => {
 
     return result.Items.map(item => ({
         id: item.SK.S,
-        conversation_id: item.PK.S,
+        conversationId: item.PK.S,
         sender: item.sender.S,
         content: item.content.S,
         system: item.system?.BOOL || false,
-        created_at: item.created_at.S
-    })).sort((a, b) => a.created_at.localeCompare(b.created_at));
+        createdAt: item.createdAt.S
+    })).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };

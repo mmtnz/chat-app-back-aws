@@ -9,7 +9,7 @@ exports.handler = async (event) => {
     console.log(event)
     const { name } = event;
     const id = uuidv4();
-    const createdAt = new Date().toISOString();
+    const createdAt = Date.now();
 
     const params = {
         TableName: process.env.TABLE_NAME,
@@ -17,7 +17,7 @@ exports.handler = async (event) => {
             PK: { S: id },
             SK: { S: "META" },
             name: { S: name },
-            created_at: { S: createdAt }
+            createdAt: { S:  `${createdAt}` }
         }
     };
 
@@ -26,6 +26,6 @@ exports.handler = async (event) => {
     return {
         id,
         name,
-        created_at: createdAt
+        createdAt: createdAt
     };
 };
