@@ -36,4 +36,13 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["ConversationMessagesFunction"]
 
+[function_build_definitions.b8f42efb-9f67-4adc-ac56-370384a6da3b]
+codeuri = "C:\\Users\\mario\\Documents\\01-GITLAB\\08-graphql-back-aws\\lambdas\\queries\\getConversation"
+runtime = "nodejs18.x"
+architecture = "x86_64"
+handler = "index.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["GetConversationFunction"]
+
 [layer_build_definitions]

@@ -4,7 +4,8 @@ const { QueryCommand } = require("@aws-sdk/client-dynamodb");
 const client = new (require("@aws-sdk/client-dynamodb").DynamoDBClient)();
 
 exports.handler = async (event) => {
-    const { conversationId } = event.arguments;
+    console.log(event)
+    const { conversationId } = event;
 
     const params = {
         TableName: process.env.TABLE_NAME,

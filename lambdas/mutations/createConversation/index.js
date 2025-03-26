@@ -5,7 +5,9 @@ const { v4: uuidv4 } = require("uuid");
 const client = new (require("@aws-sdk/client-dynamodb").DynamoDBClient)();
 
 exports.handler = async (event) => {
-    const { name } = event.arguments;
+
+    console.log(event)
+    const { name } = event;
     const id = uuidv4();
     const createdAt = new Date().toISOString();
 

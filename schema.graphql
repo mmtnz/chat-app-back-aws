@@ -6,7 +6,7 @@ type Conversation {
 
 type Message {
   id: ID!
-  conversation_id: ID!
+  conversationId: ID!
   sender: String!
   system: Boolean
   content: String!
@@ -25,6 +25,6 @@ type Mutation {
 }
 
 type Subscription {
-  messageAdded(conversationId: ID!): Message!
+  messageAdded(conversationId: ID!): Message
     @aws_subscribe(mutations: ["sendMessage"])
 }

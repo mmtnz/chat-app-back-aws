@@ -3,3 +3,5 @@
 
 */node_modules
 /layers/shared-dependencies-layer/nodejs/node_modules
+
+samconfig.toml

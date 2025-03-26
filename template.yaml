@@ -35,7 +35,29 @@ Resources:
                   - !GetAtt CreateConversationFunction.Arn
                   - !GetAtt SendMessageFunction.Arn
                   - !GetAtt GetConversationsFunction.Arn
+                  - !GetAtt GetConversationFunction.Arn
                   - !GetAtt ConversationMessagesFunction.Arn
+        - PolicyName: AccessDynamo
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt ChatAppTable.Arn
+        - PolicyName: CloudWatch
+          PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: "arn:aws:logs:*:*:*"
 
   QueryFunctionRole:
     Type: AWS::IAM::Role
@@ -108,6 +130,10 @@ Resources:
     Properties:
       Name: ChatAppApi
       AuthenticationType: API_KEY
+      LogConfig:
+        CloudWatchLogsRoleArn: !GetAtt AppSyncServiceRole.Arn  # Reference the logging IAM role
+        FieldLogLevel: ALL  # Log level for GraphQL fields (ALL, ERROR, NONE)
+        # DataSourceLogLevel: ALL  # Log level for data sources (ALL, ERROR, NONE)
 
   ChatGraphQLSchema:
     Type: AWS::AppSync::GraphQLSchema
@@ -151,6 +177,16 @@ Resources:
       Type: AWS_LAMBDA
       LambdaConfig:
         LambdaFunctionArn: !GetAtt GetConversationsFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncServiceRole.Arn
+
+  GetConversationDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt ChatGraphQLApi.ApiId
+      Name: GetConversationDataSource
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt GetConversationFunction.Arn
       ServiceRoleArn: !GetAtt AppSyncServiceRole.Arn
 
   ConversationMessagesDataSource:
@@ -198,6 +234,17 @@ Resources:
       ResponseMappingTemplate: "$util.toJson($context.result)"
     DependsOn: GetConversationsDataSource
 
+  GetConversationResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt ChatGraphQLApi.ApiId
+      TypeName: Query
+      FieldName: conversation
+      DataSourceName: GetConversationDataSource
+      RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\": \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+    DependsOn: GetConversationDataSource
+
   ConversationMessagesResolver:
     Type: AWS::AppSync::Resolver
     Properties:
@@ -209,7 +256,16 @@ Resources:
       ResponseMappingTemplate: "$util.toJson($context.result)"
     DependsOn: ConversationMessagesDataSource
 
-
+  # MessageAddedResolver:
+    # Type: AWS::AppSync::Resolver
+    # Properties:
+    #   ApiId: !GetAtt ChatGraphQLApi.ApiId
+    #   TypeName: Subscription
+    #   FieldName: messageAdded
+    #   DataSourceName: SendMessageDataSource
+    #   RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\": \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+    #   ResponseMappingTemplate: "$util.toJson($context.result)"
+    # DependsOn: SendMessageDataSource
 
   # DynamoDB Table (native CFN)
   ChatAppTable:
@@ -261,6 +317,15 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambdas/queries/getConversations
+      Handler: index.handler
+      Layers:
+        - !Ref SharedDependenciesLayer
+      Role: !GetAtt QueryFunctionRole.Arn
+  
+  GetConversationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/queries/getConversation
       Handler: index.handler
       Layers:
         - !Ref SharedDependenciesLayer

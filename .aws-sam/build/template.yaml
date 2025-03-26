@@ -39,8 +39,35 @@ Resources:
               - GetConversationsFunction
               - Arn
             - Fn::GetAtt:
+              - GetConversationFunction
+              - Arn
+            - Fn::GetAtt:
               - ConversationMessagesFunction
               - Arn
+      - PolicyName: AccessDynamo
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            Resource:
+              Fn::GetAtt:
+              - ChatAppTable
+              - Arn
+      - PolicyName: CloudWatch
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
   QueryFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -59,6 +86,7 @@ Resources:
           - Effect: Allow
             Action:
             - dynamodb:GetItem
+            - dynamodb:Scan
             - dynamodb:Query
             Resource:
               Fn::GetAtt:
@@ -94,6 +122,7 @@ Resources:
             - dynamodb:GetItem
             - dynamodb:PutItem
             - dynamodb:Query
+            - dynamodb:Scan
             Resource:
               Fn::GetAtt:
               - ChatAppTable
@@ -113,6 +142,12 @@ Resources:
     Properties:
       Name: ChatAppApi
       AuthenticationType: API_KEY
+      LogConfig:
+        CloudWatchLogsRoleArn:
+          Fn::GetAtt:
+          - AppSyncServiceRole
+          - Arn
+        FieldLogLevel: ALL
   ChatGraphQLSchema:
     Type: AWS::AppSync::GraphQLSchema
     Properties:
@@ -183,6 +218,24 @@ Resources:
         Fn::GetAtt:
         - AppSyncServiceRole
         - Arn
+  GetConversationDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      Name: GetConversationDataSource
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn:
+          Fn::GetAtt:
+          - GetConversationFunction
+          - Arn
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - AppSyncServiceRole
+        - Arn
   ConversationMessagesDataSource:
     Type: AWS::AppSync::DataSource
     Properties:
@@ -243,6 +296,20 @@ Resources:
         : \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
       ResponseMappingTemplate: $util.toJson($context.result)
     DependsOn: GetConversationsDataSource
+  GetConversationResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+        - ChatGraphQLApi
+        - ApiId
+      TypeName: Query
+      FieldName: conversation
+      DataSourceName: GetConversationDataSource
+      RequestMappingTemplate: "{\n  \"version\": \"2018-05-29\",\n  \"operation\"\
+        : \"Invoke\",\n  \"payload\": $util.toJson($context.arguments)\n}"
+      ResponseMappingTemplate: $util.toJson($context.result)
+    DependsOn: GetConversationDataSource
   ConversationMessagesResolver:
     Type: AWS::AppSync::Resolver
     Properties:
@@ -317,6 +384,19 @@ Resources:
         - Arn
     Metadata:
       SamResourceId: GetConversationsFunction
+  GetConversationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: GetConversationFunction
+      Handler: index.handler
+      Layers:
+      - Ref: SharedDependenciesLayer
+      Role:
+        Fn::GetAtt:
+        - QueryFunctionRole
+        - Arn
+    Metadata:
+      SamResourceId: GetConversationFunction
   ConversationMessagesFunction:
     Type: AWS::Serverless::Function
     Properties:
